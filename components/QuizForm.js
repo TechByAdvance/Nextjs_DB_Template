@@ -1,17 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+);
 
 export default function QuizForm() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
+    const router = useRouter();
+
     const [formData, setFormData] = useState({
         question: "",
         correct_answer: "",
         category: "英語",
-        difficulty: "medium",
     });
 
     const handleChange = (e) => {
@@ -22,23 +30,36 @@ export default function QuizForm() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError("");
         setSuccess("");
 
-        // サンプルデータのため、実際の保存は行わない
-        setTimeout(() => {
-            setSuccess("サンプルデータのため保存されませんでした");
-            setFormData({
-                question: "",
-                correct_answer: "",
-                category: "英語",
-                difficulty: "medium",
-            });
+        try {
+            // DB カラム名に合わせてマッピングして挿入
+            const payload = {
+                question_text: formData.question,
+                answer: formData.correct_answer,
+                category: formData.category,
+            };
+
+            const { data, error: sbError } = await supabase
+                .from("question")
+                .insert([payload])
+                .select();
+
+            if (sbError) {
+                setError(sbError.message);
+            } else {
+                setSuccess("クイズを保存しました。");
+                setFormData({ question: "", correct_answer: "", category: "英語" });
+            }
+        } catch (err) {
+            setError(String(err));
+        } finally {
             setLoading(false);
-        }, 1000);
+        }
     };
 
     return (
@@ -116,7 +137,7 @@ export default function QuizForm() {
                         value={formData.question}
                         onChange={handleChange}
                         required
-                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-black"
                         placeholder="問題文を入力してください"
                     />
                 </div>
@@ -136,13 +157,13 @@ export default function QuizForm() {
                         value={formData.correct_answer}
                         onChange={handleChange}
                         required
-                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-black"
                         placeholder="正解を入力してください"
                     />
                 </div>
 
-                {/* カテゴリと難易度 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* カテゴリ */}
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                     <div>
                         <label
                             htmlFor="category"
@@ -155,32 +176,13 @@ export default function QuizForm() {
                             name="category"
                             value={formData.category}
                             onChange={handleChange}
-                            className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                            className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-black"
                         >
                             <option value="英語">英語</option>
                             <option value="数学">数学</option>
                             <option value="国語">国語</option>
                             <option value="理科">理科</option>
                             <option value="社会">社会</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label
-                            htmlFor="difficulty"
-                            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                        >
-                            難易度
-                        </label>
-                        <select
-                            id="difficulty"
-                            name="difficulty"
-                            value={formData.difficulty}
-                            onChange={handleChange}
-                            className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                        >
-                            <option value="easy">簡単</option>
-                            <option value="medium">普通</option>
-                            <option value="hard">難しい</option>
                         </select>
                     </div>
                 </div>
